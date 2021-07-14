@@ -65,6 +65,7 @@ def fishers_test(df_list, row_list):
     fishers_df['Fisher_test_DataFrame'] = row_list
     # re-arrange columns in df
     fishers_df = fishers_df.reindex(columns=['Fisher_test_DataFrame', 'odds_ratio', 'fishers_p_value'])
+    fishers_df = fishers_df[['Fisher_test_DataFrame', 'fishers_p_value']]
 
     return fishers_df
 
@@ -478,18 +479,15 @@ haplogrep['haplogroup_quality'] = haplogrep['haplogroup_quality'].astype(float)
 
 # make a file with just sample names and haplogroups assigned by Haplogrep 2
 haplogrep_haplogroups = haplogrep[['sample', 'haplogrep_haplogroup', 'haplogroup_quality']]
-# drop duplicate and individuals without L haplogroups
+# drop duplicates
 haplogrep_haplogroups = haplogrep_haplogroups.drop_duplicates(subset='sample', keep='first')
 
-# haplogrep_haplogroups_only_L = haplogrep_haplogroups[haplogrep_haplogroups['haplogrep_haplogroup'].str.contains('L', na=False)]
-# # save as xlsx file
-# haplogrep_haplogroups_only_L.to_excel(r'C:/Users/Mi/Projects/mtDNA_NGS/SU/mitomaster_files/output/haplogrep_haplogroups.xlsx',
-#                                index=False)
 
 # add new column that can be used for merging haplogroup and mitomaster dataframes
 haplogrep['haplo_merge_ref'] = haplogrep["sample"] + '_' + haplogrep["allele"]
 # rearrange columns and drop columns not needed
 haplogrep = haplogrep[['haplo_merge_ref', 'phylotree_variant_type']]
+
 
 
 # PHYLOTREE DATA
@@ -534,7 +532,6 @@ if len(glob.glob('*mitomaster*.csv')) == 0:
                    title="ERROR: We couldn't find your files!")
 
     exit()  # exit if the user has chosen the wrong folder
-
 
 
 # else make one dataframe from individual mitomaster*.csv files
@@ -623,6 +620,9 @@ mitomaster = pd.merge(left=mitomaster, right=mitomap_haplo_markers, how='left', 
 mitomaster.loc[mitomaster['phylotree_variant_type'] == 'localPrivateMut', 'common_var'] = 1
 # Fill NAN values in rare columns with 0
 mitomaster['common_var'] = mitomaster['common_var'].fillna(0)
+# remove blanks
+mitomaster['phylotree_variant_type'] = mitomaster['phylotree_variant_type'].fillna(0)
+mitomaster = mitomaster[mitomaster["phylotree_variant_type"] != 0]
 
 # use easygui to allow user to select the folder with their sample_info files
 source_dir_of_sample_info_files = easygui.diropenbox(msg='Please select the folder in which you have saved '
@@ -684,6 +684,16 @@ mitomaster_output.loc[:,'other'] = mitomaster_output.loc[:,'other'].fillna('miss
 
 # save raw mitomaster file
 mitomaster_output.to_excel('mitomaster_output.xlsx', index=False)
+mitomaster_condensed = mitomaster_output[['sample', 'age', 'sex', 'status', 'pos', 'ref', 'var', 'SNP', 'mut_type',
+                                          'locus', 'other', 'GB_FL_freq%', 'GB_FL_seq', 'Freq % in haplo',
+                                          'lit_refs', 'conservation%', 'patient_report', 'haplo_freq%', 'haplo_seq',
+                                          'rare_haplo', 'rare_GB', 'codon_pos', 'AAC', 'MutPred', 'mtoolbox_ds',
+                                          'apogee_score',  'scored_variant', 'phylotree_variant_type',
+                                          'mitomaster_haplogroup', 'haplogrep_haplogroup', 'haplogroup_quality',
+                                          'heteroplasmy_%','common_var']]
+mitomaster_condensed.to_excel('annontated_mitomaster_output.xlsx', index=False)
+
+
 
 print('Importing all your selected files...')
 
@@ -839,11 +849,6 @@ common_noncoding_var_cross_tab, common_noncoding_var_cross_tab_graph = fishers_e
     (common_noncoding_var, 'sample_has_common_noncoding_var', 'noncoding')
 
 
-
-
-# # TODO Idea: make a for loop to df's for different loci and apply the same functions to all instead of repeating
-#  the code each time
-
 # ALL CODING VARIANTS
 # -------------------
 
@@ -875,9 +880,6 @@ common_coding_var_cross_tab, common_coding_var_cross_tab_graph = fishers_exact_d
     (common_coding_var, 'sample_has_common_coding_var', 'coding')
 
 
-
-
-## TODO # calculate count of variants per person for oxphos variants
 
 # ALL CODING OXPHOS VARIANTS
 # ------------------------------
@@ -1062,11 +1064,9 @@ nonsyn_var = coding_var.copy()
 nonsyn_var = nonsyn_var.dropna(subset=['AAC'])
 nonsyn_var.loc[:, 'non_synonymous'] = 'nonsyn_var'
 
-## TODO add samples that dont have non-synon variants
-
 
 nonsyn_var_appended = appended_df(nonsyn_var, sample_list, sample_info)
-nonsyn_var_appended.to_excel('nonsyn_var_appended.xls', index = False)
+
 
 # COMMON OUT OF PLACE VARIANTS
 
@@ -1258,8 +1258,8 @@ print('Saving your results...')
 # customise seaborn graphs
 sns.set_context('paper') # or talk
 sns.set_style("white")
-my_colors = ['magenta', 'deepskyblue', 'coral', 'crimson', 'mediumspringgreen', ]
-sns.set_palette(my_colors)
+my_colors = ['magenta', 'deepskyblue', 'coral', 'crimson', 'mediumspringgreen']
+sns.set_palette(['black', 'grey'])
 
 # HAPLOGROUP GRAPH
 
@@ -1309,8 +1309,7 @@ common_variants_plot.legend(title='Status group', bbox_to_anchor=(1.01, 1),
 common_variants_plot = barplot_labels(common_variants_plot)
 
 # save plot as a .png file
-plt.savefig('common_variants_plot.png', transparent=True, dpi=300, bbox_inches='tight')
-
+plt.savefig('common_variants_plot.png', transparent=True, dpi=300, bbox_inches= 'tight')
 
 # COMMON OUT OF PLACE NON-SYNONYMOUS VARIANTS GRAPH
 
@@ -1318,9 +1317,9 @@ plt.savefig('common_variants_plot.png', transparent=True, dpi=300, bbox_inches='
 plt.figure()
 # get the data for the graph you want to plot in the figure
 common_nonsyn_variants = pd.concat([
-    common_nonsyn_var_cross_tab_graph,
-    common_nonsyn_CI_var_cross_tab_graph, common_nonsyn_CIII_var_cross_tab_graph,
-    common_nonsyn_CIV_var_cross_tab_graph, common_nonsyn_CV_var_cross_tab_graph],
+    common_syn_var_cross_tab_graph,
+    common_syn_CI_var_cross_tab_graph, common_syn_CIII_var_cross_tab_graph,
+    common_syn_CIV_var_cross_tab_graph, common_syn_CV_var_cross_tab_graph],
     ignore_index=True, sort=False)
 
 common_nonsyn_variants_plot = sns.barplot(x='rare_var', y='percentage', hue='status',
@@ -1329,7 +1328,7 @@ common_nonsyn_variants_plot.set_xlabel('mtDNA region', fontsize=12, weight='bold
 common_nonsyn_variants_plot.set_xticklabels(['All OXPHOS complexes', 'CI', 'CIII', 'CIV', 'CV'])
 common_nonsyn_variants_plot.set_ylabel('Percentage of individuals (%)', fontsize=12, weight='bold',
                                        labelpad=18)
-common_nonsyn_variants_plot.set_title('Percentage of individuals with non-synonymous out-of-place variants',
+common_nonsyn_variants_plot.set_title('Percentage of individuals with synonymous out-of-place variants',
                                       fontsize=14, weight='bold',
                                       pad=18)
 common_nonsyn_variants_plot.legend(title='Status group', loc='upper right')
@@ -1349,7 +1348,6 @@ scored_common_nonsyn_variants = pd.concat([
     scored_common_nonsyn_CIV_var_cross_tab_graph, scored_common_nonsyn_CV_var_cross_tab_graph],
     ignore_index=True, sort=False)
 
-print(scored_common_nonsyn_variants)
 
 scored_common_nonsyn_variants_plot = sns.barplot(x='rare_var', y='percentage', hue='status',
                                           data=scored_common_nonsyn_variants,  edgecolor = "grey", linewidth = 1)
@@ -1393,54 +1391,7 @@ common_syn_variants_plot = barplot_labels(common_syn_variants_plot)
 # save plot as a .png file
 plt.savefig('common_syn_variants_plot.png', transparent=True, dpi=300, bbox_inches='tight')
 
-# COUNT COMMON OUT-OF-PLACE NON-SYNONYMOUS VARIANTS COUNTS GRAPH
 
-# create a new figure
-plt.figure()
-# get the data for the graph you want to plot in the figure
-common_nonsyn_var_counts = pd.concat([
-    common_nonsyn_var_count, common_nonsyn_CI_var_count, common_nonsyn_CIII_var_count,
-    common_nonsyn_CIV_var_count, common_nonsyn_CV_var_count],
-    ignore_index=True, sort=False)
-
-common_nonsyn_var_counts_plot = sns.barplot(x='status', y='percentage', hue='variant_count',
-                                             data=common_nonsyn_var_count,  edgecolor = "grey", linewidth = 1)
-common_nonsyn_var_counts_plot.set_xlabel('Status group', fontsize=12, weight='bold', labelpad=18)
-# common_nonsyn_var_counts_plot.set_xticklabels([])
-common_nonsyn_var_counts_plot.set_ylabel('Percentage of individuals (%)', fontsize=12, weight='bold', labelpad=18)
-common_nonsyn_var_counts_plot.set_title('Percentage of individuals with out-of-place nonsynonymous variants',
-                                         fontsize=14, weight='bold',
-                                         pad=18)
-common_nonsyn_var_counts_plot.legend(title='variant_count', loc='upper right')
-common_nonsyn_var_counts_plot = barplot_labels(common_nonsyn_var_counts_plot)
-
-# save plot as a .png file
-plt.savefig('common_nonsyn_var_counts_plot.png', transparent=True, dpi=300, bbox_inches='tight')
-
-
-# COUNT COMMON OUT-OF-PLACE SYNONYMOUS VARIANTS COUNTS GRAPH
-
-# create a new figure
-plt.figure()
-# get the data for the graph you want to plot in the figure
-common_syn_var_counts = pd.concat([
-    common_syn_var_count, common_syn_CI_var_count, common_syn_CIII_var_count,
-    common_syn_CIV_var_count, common_syn_CV_var_count],
-    ignore_index=True, sort=False)
-
-common_syn_var_counts_plot = sns.barplot(x='status', y='percentage', hue='variant_count',
-                                             data=common_syn_var_count,  edgecolor = "grey", linewidth = 1)
-common_syn_var_counts_plot.set_xlabel('Status group', fontsize=12, weight='bold', labelpad=18)
-# common_syn_var_counts_plot.set_xticklabels([])
-common_syn_var_counts_plot.set_ylabel('Percentage of individuals (%)', fontsize=12, weight='bold', labelpad=18)
-common_syn_var_counts_plot.set_title('Percentage of individuals with out-of-place synonymous variants',
-                                         fontsize=14, weight='bold',
-                                         pad=18)
-common_syn_var_counts_plot.legend(title='variant_count', loc='upper right')
-common_syn_var_counts_plot = barplot_labels(common_syn_var_counts_plot)
-
-# save plot as a .png file
-plt.savefig('common_syn_var_counts_plot.png', transparent=True, dpi=300, bbox_inches='tight')
 
 
 # MUTPRED VARIANT ANALYSIS (SCORE >0.5)
@@ -1459,42 +1410,6 @@ nonsyn_var_mutpred_variant_load, nonsyn_var_mutpred_count = pathogenic_scoring(d
 # Find the number of individuals from each status group who have mutpred-scored variants
 nonsyn_var_mutpred_count_grouped = variant_counts_grouped_by_counts(nonsyn_var_mutpred_count, 'pathogenic_count')
 
-# make swarmplot for variant loads
-
-# create a new figure
-plt.figure()
-
-mutpred_variant_load_plot = sns.swarmplot(x='status', y='variant_load', data=nonsyn_var_mutpred_variant_load)
-mutpred_variant_load_plot.set_xlabel('Status group', fontsize=12, weight='bold', labelpad=18)
-mutpred_variant_load_plot.set_xticklabels(['Cases', 'Controls'])
-mutpred_variant_load_plot.set_ylabel('MutPred variant load', fontsize=12, weight='bold', labelpad=18)
-mutpred_variant_load_plot.set_title('MutPred variant loads per person',
-                                    fontsize=14, weight='bold',
-                                    pad=18)
-
-# save plot as a .png file
-plt.savefig('mutpred_variant_load_plot.png', transparent=True, dpi=300, bbox_inches='tight')
-
-# GRAPH: ALL NON-SYNONYMOUS MUTPRED-SCORED VARIANTS >0.5
-
-# create a new figure
-plt.figure()
-
-nonsyn_var_mutpred_count_grouped_plot = sns.barplot(x='pathogenic_count', y='percentage', hue='status',
-                                                    data=nonsyn_var_mutpred_count_grouped)
-nonsyn_var_mutpred_count_grouped_plot.set_xlabel('Count of MutPred-scored variants', fontsize=12, weight='bold',
-                                                 labelpad=18)
-# nonsyn_var_mutpred_count_grouped_plot.set_xticklabels(['Whole mtDNA', 'rRNA genes', 'tRNA genes', 'MDPs', 'non-cdoing', 'OXPHOS genes'])
-nonsyn_var_mutpred_count_grouped_plot.set_ylabel('Percentage of individuals (%)', fontsize=12, weight='bold',
-                                                 labelpad=18)
-nonsyn_var_mutpred_count_grouped_plot.set_title('Percentage of individuals with MutPred-scored variants >0.5',
-                                                fontsize=14, weight='bold',
-                                                pad=18)
-nonsyn_var_mutpred_count_grouped_plot.legend(title='Status group', loc='upper right')
-nonsyn_var_mutpred_count_grouped_plot = barplot_labels(nonsyn_var_mutpred_count_grouped_plot)
-
-# save plot as a .png file
-plt.savefig('nonsyn_var_mutpred_count_grouped_plot.png', transparent=True, dpi=300, bbox_inches='tight')
 
 
 # COMMON OUT-OF-PLACE NON-SYNONYMOUS VARIANTS
@@ -1520,45 +1435,7 @@ nonsyn_var_mtoolbox_variant_load, nonsyn_var_mtoolbox_count = pathogenic_scoring
 # Find the number of individuals from each status group who have mtoolbox-scored variants
 nonsyn_var_mtoolbox_count_grouped = variant_counts_grouped_by_counts(nonsyn_var_mtoolbox_count, 'pathogenic_count')
 
-# make swarmplot for variant loads
 
-# create a new figure
-plt.figure()
-
-mtoolbox_variant_load_plot = sns.swarmplot(x='status', y='variant_load', data=nonsyn_var_mtoolbox_variant_load)
-mtoolbox_variant_load_plot.set_xlabel('Status group', fontsize=12, weight='bold', labelpad=18)
-mtoolbox_variant_load_plot.set_xticklabels(['Cases', 'Controls'])
-mtoolbox_variant_load_plot.set_ylabel('MToolbox variant load', fontsize=12, weight='bold', labelpad=18)
-mtoolbox_variant_load_plot.set_title('MToolbox variant loads per person',
-                                     fontsize=14, weight='bold',
-                                     pad=18)
-
-# save plot as a .png file
-plt.savefig('mtoolbox_variant_load_plot.png', transparent=True, dpi=300, bbox_inches='tight')
-
-# GRAPH: ALL NON-SYNONYMOUS mtoolbox-SCORED VARIANTS >0.4311
-
-# create a new figure
-plt.figure()
-
-nonsyn_var_mtoolbox_count_grouped_plot = sns.barplot(x='pathogenic_count', y='percentage', hue='status',
-                                                     data=nonsyn_var_mtoolbox_count_grouped)
-nonsyn_var_mtoolbox_count_grouped_plot.set_xlabel('Count of MToolbox-scored variants', fontsize=12, weight='bold',
-                                                  labelpad=18)
-# nonsyn_var_mtoolbox_count_grouped_plot.set_xticklabels(['Whole mtDNA', 'rRNA genes', 'tRNA genes', 'MDPs', 'non-cdoing', 'OXPHOS genes'])
-nonsyn_var_mtoolbox_count_grouped_plot.set_ylabel('Percentage of individuals (%)', fontsize=12, weight='bold',
-                                                  labelpad=18)
-nonsyn_var_mtoolbox_count_grouped_plot.set_title('Percentage of individuals with MToolbox-scored variants >0.4311',
-                                                 fontsize=14, weight='bold',
-                                                 pad=18)
-nonsyn_var_mtoolbox_count_grouped_plot.legend(title='Status group', loc='upper right')
-nonsyn_var_mtoolbox_count_grouped_plot = barplot_labels(nonsyn_var_mtoolbox_count_grouped_plot)
-
-# save plot as a .png file
-plt.savefig('nonsyn_var_mtoolbox_count_grouped_plot.png', transparent=True, dpi=300, bbox_inches='tight')
-
-# save variant load df to SPSS file
-pyreadstat.write_sav(nonsyn_var_mtoolbox_variant_load, dir_of_analysis_files)
 
 # COMMON OUT-OF-PLACE NON-SYNONYMOUS VARIANTS
 
@@ -1581,42 +1458,6 @@ nonsyn_var_apogee_variant_load, nonsyn_var_apogee_count = pathogenic_scoring(dat
 # Find the number of individuals from each status group who have apogee-scored variants
 nonsyn_var_apogee_count_grouped = variant_counts_grouped_by_counts(nonsyn_var_apogee_count, 'pathogenic_count')
 
-# make swarmplot for variant loads: eg.
-
-# create a new figure
-plt.figure()
-
-apogee_variant_load_plot = sns.swarmplot(x='status', y='variant_load', data=nonsyn_var_apogee_variant_load)
-apogee_variant_load_plot.set_xlabel('Status group', fontsize=12, weight='bold', labelpad=18)
-apogee_variant_load_plot.set_xticklabels(['Cases', 'Controls'])
-apogee_variant_load_plot.set_ylabel('APOGEE variant load', fontsize=12, weight='bold', labelpad=18)
-apogee_variant_load_plot.set_title('APOGEE variant loads per person',
-                                   fontsize=14, weight='bold',
-                                   pad=18)
-
-# save plot as a .png file
-plt.savefig('apogee_variant_load_plot.png', transparent=True, dpi=300, bbox_inches='tight')
-
-# GRAPH: ALL NON-SYNONYMOUS apogee-SCORED VARIANTS >0.5
-
-# create a new figure
-plt.figure()
-
-nonsyn_var_apogee_count_grouped_plot = sns.barplot(x='pathogenic_count', y='percentage', hue='status',
-                                                   data=nonsyn_var_apogee_count_grouped)
-nonsyn_var_apogee_count_grouped_plot.set_xlabel('Count of APOGEE-scored variants', fontsize=12, weight='bold',
-                                                labelpad=18)
-# nonsyn_var_apogee_count_grouped_plot.set_xticklabels(['Whole mtDNA', 'rRNA genes', 'tRNA genes', 'MDPs', 'non-cdoing', 'OXPHOS genes'])
-nonsyn_var_apogee_count_grouped_plot.set_ylabel('Percentage of individuals (%)', fontsize=12, weight='bold',
-                                                labelpad=18)
-nonsyn_var_apogee_count_grouped_plot.set_title('Percentage of individuals with APOGEE-scored variants >0.5',
-                                               fontsize=14, weight='bold',
-                                               pad=18)
-nonsyn_var_apogee_count_grouped_plot.legend(title='Status group', loc='upper right')
-nonsyn_var_apogee_count_grouped_plot = barplot_labels(nonsyn_var_apogee_count_grouped_plot)
-
-# save plot as a .png file
-plt.savefig('nonsyn_var_apogee_count_grouped_plot.png', transparent=True, dpi=300, bbox_inches='tight')
 
 
 # COMMON OUT-OF-PLACE NON-SYNONYMOUS VARIANTS
@@ -1637,7 +1478,7 @@ common_nonsyn_var_apogee_count_grouped = variant_counts_grouped_by_counts(common
 
 common_var_graphs_dict = {'common_var': common_variants,
                               'common_nonsyn_var': common_nonsyn_variants, 'common_syn_var':
-                                  common_syn_variants}
+                                  common_syn_variants, 'common_nonsyn_scored_var': scored_common_nonsyn_variants}
 # apply function to save dataframes into one excel file with each df as a separate sheet
 save_xls(dict_df=common_var_graphs_dict, path='graph_input.xls')
 
@@ -1903,22 +1744,13 @@ unreported_variants.to_excel('unreported_variants.xls', index=False, sheet_name=
 # ----------------------------
 
 # make a list of dfs to be used for the Fisher's exact tests
-common_mtDNA_var_df_list = [common_mtDNA_var_cross_tab, common_tRNA_var_cross_tab, common_rRNA_var_cross_tab,
-                            common_noncoding_var_cross_tab, common_coding_var_cross_tab, common_syn_var_cross_tab,
-                            common_syn_CI_var_cross_tab,
-                            common_syn_CIII_var_cross_tab, common_syn_CIV_var_cross_tab, common_syn_CV_var_cross_tab,
+common_mtDNA_var_df_list = [common_mtDNA_var_cross_tab, common_coding_var_cross_tab, common_syn_var_cross_tab,
                             common_nonsyn_var_cross_tab,
-                            common_nonsyn_CI_var_cross_tab, common_nonsyn_CIII_var_cross_tab,
-                            common_nonsyn_CIV_var_cross_tab,
-                            common_nonsyn_CV_var_cross_tab, common_scored_var_cross_tab]
+                            common_scored_var_cross_tab]
 
 # Make a list of names for the corresponding dfs
 
-Fisher_test_DataFrame_list_scored = ['Whole_genome', 'tRNA', 'rRNA', 'Non-coding', 'Coding',
-                              'Synonymous', 'Synonymous_CI', 'Synonymous_CIII',
-                              'Synonymous_CIV', 'Synonymous_CV', 'Non_synonymous', 'Non_synonymous_CI',
-                              'Non_synonymous_CIII',
-                              'Non_synonymous_CIV', 'Non_synonymous_CV', 'Non_synonymous_scored']
+Fisher_test_DataFrame_list_scored = ['Whole_genome', 'Coding', 'Synonymous', 'Non_synonymous','Non_synonymous_scored']
 
 # apply fishers exact function
 common_mtDNA_var_fishers_tests = fishers_test(df_list=common_mtDNA_var_df_list, row_list=Fisher_test_DataFrame_list_scored)
@@ -1927,16 +1759,6 @@ common_mtDNA_var_fishers_tests = fishers_test(df_list=common_mtDNA_var_df_list, 
 # save fishers exact output as xlsx file
 common_mtDNA_var_fishers_tests.to_excel("Fishers_test_output.xlsx", index = False)
 
-## TEST
-input_df_list = [nonsyn_CI_var, nonsyn_CIII_var, nonsyn_CV_var, nonsyn_CV_var]
-df_names_list = ['common_nonsyn_CI_var','common_nonsyn_CIII_var', 'common_nonsyn_CV_var', 'common_nonsyn_CV_var']
-
-new_df_list = [rare_variants_df(i,'common_var', sample_list, sample_info) for i in input_df_list]
-# Create a zip object from two lists
-zipbObj = zip(df_names_list, new_df_list)
-# Create a dictionary from zip object
-dictOfDfs = dict(zipbObj)
-print(dictOfDfs)
 
 # ----------------------------------------------------------------------------------------------------------------------
 # USER MESSAGE: ANALYSIS COMPLETE
