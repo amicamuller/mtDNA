@@ -4,8 +4,8 @@ CONTENTS OF THIS FILE
 ---------------------
 
  * Introduction
- * Installation
  * Requirements
+ * Running the analysis
 
 INTRODUCTION
 ------------
@@ -26,6 +26,9 @@ The second script (**cleaned_making_a_mitomaster_upload_file.py**) tests the out
 REQUIREMENTS
 ------------
 Before running the scripts in this repository, please ensure you have set up an environment with the requirements specified in the 'mtDNA_sequencing_Python_requirements.txt'.
+
+RUNNING THE ANALYSIS
+--------------------
 
 ## making_a_mitomaster_upload_file.py
 Running this script will make a text file that can be uploaded to Mitomaster for further processing and the assignment of Genbank and Haplogroup frequencies of the individual variants.
