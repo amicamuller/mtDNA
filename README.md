@@ -12,7 +12,7 @@ INTRODUCTION
 This repo contains two .py files in the **"Scripts"** folder/directory.
 These scripts use output files from mtDNA-Server (https://mtdna-server.uibk.ac.at/index.html) to test the hypothesis that more cases than controls have 'out-of-place' mtDNA variants that are haplogroup-defining but do not define the mtDNA background they are found in. As such, the data to be analysed should contain mtDNA variants from both cases and controls. 
 
-The first script (**making_a_mitomaster_upload_file.py**) creates an input (.txt) file for Mitomap/Mitomaster containing all homoplamic mtDNA variants and those with a heteroplasmy level >50%, called by the mtDNA-Server pipline. MITOMASTER annotates the called variants and .csv files with these annotated variants can easily be downloaded by the user for further processing.
+The first script (```making_a_mitomaster_upload_file.py```) creates an input (.txt) file for Mitomap/Mitomaster containing all homoplamic mtDNA variants and those with a heteroplasmy level >50%, called by the mtDNA-Server pipline. MITOMASTER annotates the called variants and .csv files with these annotated variants can easily be downloaded by the user for further processing.
 
 The second script (**cleaned_making_a_mitomaster_upload_file.py**) tests the 'out-of-place' hypothesis, requiring the mtDNA-Server haplogroups.txt files and the annoated Mitomaster.csv files as input. It generates several output files that can be used for further processing and evaluation by the user. These include:
        1. An annotated mitomaster output file containing all variants included in analysis (i.e. homoplamic mtDNA variants and those with a heteroplasmy level >50%, called by the mtDNA-Server pipline and annotated using Mitomaster) 
