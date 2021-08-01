@@ -602,7 +602,7 @@ mitomaster = pd.merge(left=mitomaster, right=het_levels, how='left', on='haplo_m
 # ask the user which percentage of heteroplasmy  they want to include in their analysis
 user_het_level = easygui.enterbox(
     msg="Please enter the heteroplasmy level you'd like to include in your analysis greater than 50.\n\n",
-    title='Percentage heteroplasmy cut-off', default='50', strip=True)
+    title='Percentage heteroplasmy cut-off', default='90', strip=True)
 user_het_level_int = int(user_het_level)
 # filter df for heteroplasmies > user heteroplasmy cut-off percent
 mitomaster = mitomaster[mitomaster.loc[:, 'heteroplasmy_%'] > user_het_level_int]
@@ -620,9 +620,7 @@ mitomaster = pd.merge(left=mitomaster, right=mitomap_haplo_markers, how='left', 
 mitomaster.loc[mitomaster['phylotree_variant_type'] == 'localPrivateMut', 'common_var'] = 1
 # Fill NAN values in rare columns with 0
 mitomaster['common_var'] = mitomaster['common_var'].fillna(0)
-# remove blanks
-mitomaster['phylotree_variant_type'] = mitomaster['phylotree_variant_type'].fillna(0)
-mitomaster = mitomaster[mitomaster["phylotree_variant_type"] != 0]
+
 
 # use easygui to allow user to select the folder with their sample_info files
 source_dir_of_sample_info_files = easygui.diropenbox(msg='Please select the folder in which you have saved '
@@ -655,9 +653,9 @@ haplogroup_choices = ["African","European"]
 reply = easygui.buttonbox(haplo_choice_msg, choices=haplogroup_choices)
 
 # Define african and European lineages
-african_lineages = ['L']
-euro_lineages = ['X','X1', 'X2','I', 'W', 'R0', 'R0a', 'H', 'HV', 'V', 'JT', 'J', 'T', 'U', 'K', 'N1', 'N2']
-
+african_lineages = ['L0']
+euro_lineages = ['X','I', 'W','H', 'V', 'J', 'T', 'U', 'K']
+# ['X','X1', 'X2','I', 'W', 'R0', 'R0a', 'H', 'HV', 'V', 'JT', 'J', 'T', 'U', 'K', 'N1', 'N2']
 # use user choice to filter mitomster output and exclude unwanted samples
 haplo_choice = african_lineages if reply == 'African' else euro_lineages
 
@@ -715,10 +713,14 @@ sample_list = list(dict.fromkeys(sample_list))
 
 # Find the count of cases and controls from each haplogroup
 haplogroups = mitomaster_output.drop_duplicates(subset='sample', keep='first')
-##TODO add haplogroups to sample info?
+
 # make a copy of df and add column with simple haplogroups
-haplogroups = haplogroups.copy()
-haplogroups.loc[:, 'simple_haplogroup'] = haplogroups.haplogrep_haplogroup.str[:2]
+simple_african_haplogroups = haplogroups.copy()
+simple_euro_haplogroups = haplogroups.copy()
+simple_african_haplogroups.loc[:, 'simple_haplogroup'] = haplogroups.haplogrep_haplogroup.str[:2]
+simple_euro_haplogroups.loc[:, 'simple_haplogroup'] = haplogroups.haplogrep_haplogroup.str[:1]
+haplogroups = simple_african_haplogroups if reply == 'African' else simple_euro_haplogroups
+
 
 # add haplogroups to sample_info df
 sample_info_with_haplogroups = haplogroups[['sample', 'haplogrep_haplogroup']]
@@ -1271,7 +1273,7 @@ plt.figure() # can put figsize
 # plot the graph in the new figure
 simple_haplogroups_count_plot = sns.barplot(x='simple_haplogroup', y='percentage', hue='status',
                                             data=simple_haplogroups_count,  edgecolor = "grey", linewidth = 1, ci=None)
-simple_haplogroups_count_plot.set_xlabel('African Haplogroups', fontsize=12, weight='bold', labelpad=18)
+simple_haplogroups_count_plot.set_xlabel('Haplogroups', fontsize=12, weight='bold', labelpad=18)
 # simple_haplogroups_count_plot.set_xticklabels(['Cases', 'Controls'])
 simple_haplogroups_count_plot.set_ylabel('Percentage of individuals (%)', fontsize=12, weight='bold', labelpad=18)
 simple_haplogroups_count_plot.set_title('Percentage of individuals from each haplogroup', fontsize=14,
@@ -1317,9 +1319,9 @@ plt.savefig('common_variants_plot.png', transparent=True, dpi=300, bbox_inches= 
 plt.figure()
 # get the data for the graph you want to plot in the figure
 common_nonsyn_variants = pd.concat([
-    common_syn_var_cross_tab_graph,
-    common_syn_CI_var_cross_tab_graph, common_syn_CIII_var_cross_tab_graph,
-    common_syn_CIV_var_cross_tab_graph, common_syn_CV_var_cross_tab_graph],
+    common_nonsyn_var_cross_tab_graph,
+    common_nonsyn_CI_var_cross_tab_graph, common_nonsyn_CIII_var_cross_tab_graph,
+    common_nonsyn_CIV_var_cross_tab_graph, common_nonsyn_CV_var_cross_tab_graph],
     ignore_index=True, sort=False)
 
 common_nonsyn_variants_plot = sns.barplot(x='rare_var', y='percentage', hue='status',
@@ -1328,7 +1330,7 @@ common_nonsyn_variants_plot.set_xlabel('mtDNA region', fontsize=12, weight='bold
 common_nonsyn_variants_plot.set_xticklabels(['All OXPHOS complexes', 'CI', 'CIII', 'CIV', 'CV'])
 common_nonsyn_variants_plot.set_ylabel('Percentage of individuals (%)', fontsize=12, weight='bold',
                                        labelpad=18)
-common_nonsyn_variants_plot.set_title('Percentage of individuals with synonymous out-of-place variants',
+common_nonsyn_variants_plot.set_title('Percentage of individuals with non-synonymous out-of-place variants',
                                       fontsize=14, weight='bold',
                                       pad=18)
 common_nonsyn_variants_plot.legend(title='Status group', loc='upper right')
@@ -1391,7 +1393,31 @@ common_syn_variants_plot = barplot_labels(common_syn_variants_plot)
 # save plot as a .png file
 plt.savefig('common_syn_variants_plot.png', transparent=True, dpi=300, bbox_inches='tight')
 
+# COMMON OUT OF PLACE CODING VARIANTS GRAPH
 
+# create a new figure
+plt.figure()
+# get the data for the graph you want to plot in the figure
+all_coding_common_variants = pd.concat([common_coding_var_cross_tab_graph,
+    common_syn_var_cross_tab_graph,
+    common_nonsyn_var_cross_tab_graph, common_scored_var_cross_tab_graph],
+    ignore_index=True, sort=False)
+
+all_coding_common_variants_plot = sns.barplot(x='rare_var', y='percentage', hue='status',
+                                          data=all_coding_common_variants,  edgecolor = "grey", linewidth = 1)
+all_coding_common_variants_plot.set_xlabel('Variant Type', fontsize=12, weight='bold', labelpad=18)
+all_coding_common_variants_plot.set_xticklabels(['All OXPHOS', 'Synonymous', 'Non-synonymous', 'Scored non-synonymous'])
+plt.xticks(rotation=25)
+all_coding_common_variants_plot.set_ylabel('Percentage of individuals (%)', fontsize=12, weight='bold',
+                                       labelpad=18)
+all_coding_common_variants_plot.set_title('Percentage of individuals with out-of-place OXPHOS variants',
+                                      fontsize=14, weight='bold',
+                                      pad=18)
+all_coding_common_variants_plot.legend(title='Status group', loc='upper right')
+all_coding_common_variants_plot = barplot_labels(all_coding_common_variants_plot)
+
+# save plot as a .png file
+plt.savefig('all_OXPHOS_common_variants_plot.png', transparent=True, dpi=600, bbox_inches='tight')
 
 
 # MUTPRED VARIANT ANALYSIS (SCORE >0.5)
@@ -1653,51 +1679,6 @@ save_xls_fishers(dict_df=private_var_fishers_dict, path='Fishers_test_input.xls'
 ## TODO make a list of novel variants (i.e. genbank freq = 0)
 
 
-# # PATIENT REPORT OUTPUT
-# # ---------------------
-#
-# # change all 0's to nan
-# patient_reports = mitomaster_output.replace(0, np.nan)
-# # drop all rows in patient_report col = nan
-# patient_reports = patient_reports.dropna(subset=['patient_report'])
-# # change all nan's back to 0
-# all_patient_reports = patient_reports.replace(np.nan, 0)
-# # remove unnecessary columns
-# all_patient_reports_trimmed = all_patient_reports.filter(['sample', 'SNP', 'locus', 'conservation%', 'patient_report',
-#                                                           'GB_FL_freq%', 'GB_FL_seq', 'haplo_freq%', 'haplo_seq',
-#                                                           'rare_haplo', 'rare_GB', 'codon_pos',
-#                                                           'AAC', 'MutPred', 'mtoolbox_ds', 'apogee_score', 'age', 'sex',
-#                                                           'status', 'haplogroup'])
-#
-# # make a df with rare haplogroup variant patient reports
-#
-# rare_haplo_patient_reports = all_patient_reports_trimmed
-# # change all 0's to nan
-# rare_haplo_patient_reports = all_patient_reports_trimmed.replace(0, np.nan)
-# # drop all rows in patient_report col = nan
-# rare_haplo_patient_reports = rare_haplo_patient_reports.dropna(subset=['rare_haplo'])
-# # change all nan's back to 0
-# rare_haplo_patient_reports = rare_haplo_patient_reports.replace(np.nan, 0)
-#
-# # make a df with rare genbank variant patient reports
-#
-# rare_GB_patient_reports = all_patient_reports_trimmed
-# # change all 0's to nan
-# rare_GB_patient_reports = all_patient_reports_trimmed.replace(0, np.nan)
-# # drop all rows in patient_report col = nan
-# rare_GB_patient_reports = rare_GB_patient_reports.dropna(subset=['rare_GB'])
-# # change all nan's back to 0
-# rare_GB_patient_reports = rare_GB_patient_reports.replace(np.nan, 0)
-#
-# # Make one excel sheet with all the variants that have 'patient reports'
-# patient_report_dict = {'All_var_patient_reports': all_patient_reports_trimmed,
-#                        'Rare_haplo_var_patient_reports': rare_haplo_patient_reports,
-#                        'Rare_GB_var_patient_reports': rare_GB_patient_reports}
-#
-# save_xls(dict_df=patient_report_dict, path='variants_with_patient_reports_output.xls')
-#
-# ## TODO Check AAC column to make sure it shows whether there is an AAC eg. A563L
-
 # LIST OF COMMON VARIANTS OUTPUT
 # ------------------------------
 
@@ -1744,13 +1725,13 @@ unreported_variants.to_excel('unreported_variants.xls', index=False, sheet_name=
 # ----------------------------
 
 # make a list of dfs to be used for the Fisher's exact tests
-common_mtDNA_var_df_list = [common_mtDNA_var_cross_tab, common_coding_var_cross_tab, common_syn_var_cross_tab,
+common_mtDNA_var_df_list = [common_coding_var_cross_tab, common_syn_var_cross_tab,
                             common_nonsyn_var_cross_tab,
                             common_scored_var_cross_tab]
 
 # Make a list of names for the corresponding dfs
 
-Fisher_test_DataFrame_list_scored = ['Whole_genome', 'Coding', 'Synonymous', 'Non_synonymous','Non_synonymous_scored']
+Fisher_test_DataFrame_list_scored = ['Coding', 'Synonymous', 'Non_synonymous','Non_synonymous_scored']
 
 # apply fishers exact function
 common_mtDNA_var_fishers_tests = fishers_test(df_list=common_mtDNA_var_df_list, row_list=Fisher_test_DataFrame_list_scored)
