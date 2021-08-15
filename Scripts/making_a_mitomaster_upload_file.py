@@ -1,6 +1,5 @@
-print("Running 'making_a_mitomaster_upload_file' script...")
-
 import easygui, os, pandas as pd, numpy as np, glob
+print("Running 'making_a_mitomaster_upload_file' script...")
 
 # EASYGUI POP-UPS WITH REQUIREMENTS
 
@@ -20,13 +19,12 @@ source_dir_of_required_files = easygui.diropenbox(msg="Welcome! For this script 
 
 
 msg = ("Before proceeding, please ensure the following:\n\n"
-       "1. You have run your sequencing files (in BAM or fastq format) on the mtDNA-Server ("
+       "1. You have run your sequencing files (in BAM or FASTQ format) on the mtDNA-Server ("
        "https://mtdna-server.uibk.ac.at/index.html)\n\n "
        "2. You have downloaded and saved all individual mtDNA-Server output files in a single folder on your "
        "computer\n\n"
        "3. The names of your mtDNA-Server heteroplasmy files contain the word \"heteroplasmies\" and the files are in "
-       "a .txt "
-       "(i.e. text) format)\n\n"
+       "a .txt (i.e. text) format)\n\n"
        "4. The names of your mtDNA-Server homoplasmy (i.e. variant) files contain the word \"variants\" and are in a "
        ".txt format\n\n "
        "              Click \"Continue\" if you have ensured all of the above\n\n")
@@ -76,9 +74,6 @@ else:
     filter_type1_heteroplasmies = heteroplasmies.loc[:, 'TYPE'] == 1
     type1_heteroplasmies = heteroplasmies[filter_type1_heteroplasmies]
 
-
-
-
     # list of columns we want from the filtered heteroplasmy file
     wanted_heteroplasmy_columns = ['ID', 'POS', 'rCRS', 'TOP-BASE-FWD', 'MINOR-BASE-FWD', 'HET-LEVEL','NUMTs']
     filtered_heteroplasmies = type1_heteroplasmies[wanted_heteroplasmy_columns]
@@ -96,7 +91,7 @@ else:
     filter_blanks = top_snp.loc[:, 'minor_not_ref'] == ''
     # apply filter
     top_snp_df = top_snp[filter_blanks]
-    # make a copy to avoid iloc warning
+    # make a copy
     top_snp_df = top_snp_df.copy()
     # add SNP column
     top_snp_df.loc[:, 'SNP'] = top_snp_df.loc[:, 'POS'] + top_snp_df.loc[:, 'TOP-BASE-FWD']
@@ -118,7 +113,7 @@ else:
     filter_blanks = minor_snp['minor_not_ref'] != ''
     # apply filter
     minor_snp_df = minor_snp[filter_blanks]
-    # make a copy to avoid iloc warning
+    # make a copy
     minor_snp_df = minor_snp_df.copy()
     # add SNP column
     minor_snp_df.loc[:, 'SNP'] = minor_snp_df.loc[:, 'POS'] + minor_snp_df.loc[:, 'MINOR-BASE-FWD']
@@ -139,8 +134,7 @@ else:
     # ask the user which percentage of heteroplasmy  they want to include in their analysis
     user_het_level = easygui.enterbox(
         msg="Please enter the heteroplasmy level you'd like to include in your analysis (e.g. 50).\n\n"
-            "If you are looking at inherited mtDNA variation, we recommend using a 50% heteroplasmy cut "
-            "off or higher", title='Percentage heteroplasmy cut-off', default='50',
+            "We recommend using a 50% heteroplasmy cut-off or higher", title='Percentage heteroplasmy cut-off', default='50',
         strip=True)
     user_het_level_int = int(user_het_level)
 
@@ -157,7 +151,7 @@ else:
 
     # Make a dataframe for a mitomaster upload file with heteroplasmic SNPs < user selected cut-off
     processed_heteroplasmies_less_than_50_percent = processed_heteroplasmies[(processed_heteroplasmies.loc[:, 'HET-LEVEL'] > 10) & (processed_heteroplasmies.loc[:, 'HET-LEVEL'] < user_het_level_int)]
-    # rename rCRS column to ref-
+    # rename rCRS column to ref
     processed_heteroplasmies_less_than_50_percent = processed_heteroplasmies_less_than_50_percent \
         .rename(columns={'rCRS': 'ref'})
     final_minor_heteroplasmies = processed_heteroplasmies_less_than_50_percent[['ID', 'POS', 'ref', 'var', 'SNP']]
@@ -181,10 +175,10 @@ else:
     # add new column that can be used for merging dataframes later on
     heteroplasmic_merge.loc[:, 'haplo_merge_ref'] = heteroplasmic_merge.loc[:,"ID"] + '_' + heteroplasmic_merge.loc[:,"SNP"]
     # rename columns
-    heteroplasmic_merge = heteroplasmic_merge.rename(columns = {'HET-LEVEL':'heteroplasmy_%' })
+    heteroplasmic_merge = heteroplasmic_merge.rename(columns = {'HET-LEVEL':'heteroplasmy_%'})
     print(heteroplasmic_merge)
 
-# Step 5: Preparing mtDNAServer variant files
+# Step 5: Preparing mtDNA-Server variant files
 
 # check if there are homoplasmic (i.e. variant) txt files in the selected folder
 if len(glob.glob('*variants*.txt')) == 0:
@@ -259,7 +253,7 @@ else:
 
 
 destination_dir = easygui.diropenbox(
-    msg='Please select the folder in which you want to save your Mitomaster upload file')  # easygui is used to get a path
+    msg='Please select the folder in which you want to save your Mitomaster upload files')  # easygui is used to get a path
 
 # change directory to the directory chosen by the user
 os.chdir(destination_dir)
@@ -290,8 +284,8 @@ print('Mitomaster upload file/s saved successfully to '+ destination_dir)
 
 
 easygui.msgbox("SUCCESS!! \n\n"
-               "Your files (homoplasmies_mitomaster_upload_file.txt, heteroplasmies_mitomaster_upload_file.txt and "
-               "het_levels.csv) are complete and have been saved to the folder you have "
+               "Your files (homoplasmies_mitomaster_upload_file.txt, heteroplasmies_mitomaster_upload_file.txt, "
+               "het_levels.csv and het_levels_cnfrm.xlsx) are complete and have been saved to the folder you have "
                "selected!\n\n"
                "Please follow the 10 instructions below to upload your file to Mitomaster and to subsequently download "
                "the required output files:\n\n "
@@ -300,20 +294,14 @@ easygui.msgbox("SUCCESS!! \n\n"
                "3. Under Step 2, Option 2: upload your 'homoplasmies_mitomaster_upload_file.txt' file by clicking on the "
                "'Select file' button and choosing your file\n\n "
                "4. Click on \"Submit\" and wait for the Results page to load \n\n"
-               "5. Scroll down to \"Sequence alignment\", then click on the \"CSV\"  button to download a list of all "
-               "detected variants (in a .csv format)\n\n "
-               "6. Save the CSV file (in the same folder as the files created using this script) with a file name that:\n\n"
-               "  - Has NO SPACES between words (use an underscore instead of spaces e.g. var_file_2020)\n\n"
-               "  - Includes the word \"var_list\" (all lower case letters, words separated by underscores) \n\n"
-               "  - EXCLUDES the word \"mitomaster\" (all lower case letters) \n\n"
-               "7. Then again under \"Sequence alignment\" click on the word \"here\" in \"click here to "
+               "5. Scroll down to \"Sequence alignment\", then click on the word \"here\" in \"click here to "
                "show variant details for all\"\n\n "
-               "8. A new page with \"Alignment Details\" should load. Click on the \"CSV\" button to download details "
+               "6. A new page with \"Alignment Details\" should load. Click on the \"CSV\" button to download details "
                "of all variants detected (in a .csv format)\n\n "
-               "9. Save the CSV file in the same folder as the CSV file you saved in Step 6, with a file name that:\n\n"
+               "7. Save the CSV file (in the same folder as the files generated by running this script), with a file name that:\n\n"
                "  - Has NO SPACES between words (use an underscore instead of spaces e.g. mitomaster_output_2020)\n\n"
                "  - Includes the word \"mitomaster\" (all lower case letters) \n\n"
-               "10. Run the script 'processing_mitomaster_output_files'\n\n",
+               "8. Run the script 'cleaned_processing_mitomaster_output_files'\n\n",
                title='File saved successfully', ok_button='OK. Got it!')
 
 
