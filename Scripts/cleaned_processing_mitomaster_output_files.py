@@ -8,9 +8,9 @@ print("Running 'processing_mitomaster_output_files' script...")
 print('Importing modules...')
 
 import PySimpleGUI as sg, os, pandas as pd, seaborn as sns, matplotlib.pyplot as plt, \
-    numpy as np, glob, scipy.stats as stats
+    numpy as np, glob, scipy.stats as stats, warnings
 
-# warnings.filterwarnings(action='ignore')
+warnings.filterwarnings(action='ignore')
 
 # ----------------------------------------------------------------------------------------------------------------------
 
@@ -602,7 +602,7 @@ mitomaster['haplogrep_haplogroup'] = mitomaster.haplogrep_haplogroup.astype(str)
 
 # Read all het_levels.csv files into one dataframe
 all_het_level_files = glob.glob(r'*het_levels*.csv')
-het_levels = pd.concat((pd.read_csv(f, sep=((',') or (';'))) for f in all_het_level_files))
+het_levels = pd.concat((pd.read_csv(f, sep= ',|;', engine='python') for f in all_het_level_files))
 
 mitomaster = pd.merge(left=mitomaster, right=het_levels, how='left', on='haplo_merge_ref')
 # ask the user which percentage of heteroplasmy  they want to include in their analysis
@@ -613,7 +613,7 @@ layout = [[sg.Text("Please enter the heteroplasmy level you'd like to include in
 
 het_window = sg.Window('Percentage heteroplasmy cut-off', layout)
 event, values = het_window.read()
-window.close()
+het_window.close()
 user_het_level = values[0]
 
 
@@ -647,11 +647,8 @@ os.chdir(source_dir_of_sample_info_files)
 
 # assign samples sex and patient status. Input file with sample details should have the following headings: sample (
 # name of sample) , age, sex, status (case or control) in .csv (;-delimited) format
-sample_info = glob.glob(r'*sample_info*.csv', sep=((';') or (',')))
-# convert to pd DF
-sample_info = sample_info.compute()
-# reset the index to start at 0
-sample_info.index = np.arange(0, len(sample_info))
+sample_infos = glob.glob(r'*sample_info*.csv')
+sample_info = pd.concat((pd.read_csv(f, sep = ',|;', engine='python') for f in sample_infos))
 
 # merge mitomaster DF with sample info DF
 mitomaster_output = pd.merge(mitomaster, sample_info, on='sample', how='left')
@@ -1312,13 +1309,12 @@ plt.savefig('simple_haplogroups_count_plot.png', transparent=True, dpi=300, bbox
 
 # COMMON OUT OF PLACE VARIANTS GRAPH
 
+
 # create a new figure
 plt.figure(figsize=(10,6))
 # get the data for the graph you want to plot in the figure
-common_variants = pd.concat([common_mtDNA_var_cross_tab_graph, common_rRNA_var_cross_tab_graph,
-                             common_tRNA_var_cross_tab_graph,
-                             common_noncoding_var_cross_tab_graph, common_coding_var_cross_tab_graph],
-                            ignore_index=True, sort=False)
+common_variants = pd.concat([common_mtDNA_var_cross_tab_graph, common_rRNA_var_cross_tab_graph,common_tRNA_var_cross_tab_graph,common_noncoding_var_cross_tab_graph, common_coding_var_cross_tab_graph],ignore_index=True, sort=False)
+common_variants = common_variants.astype({"percentage": float})
 
 # specify values
 common_variants_plot = sns.barplot(x='rare_var', y='percentage', hue='status', data=common_variants,  edgecolor = "grey", linewidth = 1)
@@ -1349,6 +1345,8 @@ common_nonsyn_variants = pd.concat([
     common_nonsyn_CIV_var_cross_tab_graph, common_nonsyn_CV_var_cross_tab_graph],
     ignore_index=True, sort=False)
 
+common_nonsyn_variants = common_nonsyn_variants.astype({"percentage": float})
+
 common_nonsyn_variants_plot = sns.barplot(x='rare_var', y='percentage', hue='status',
                                           data=common_nonsyn_variants,  edgecolor = "grey", linewidth = 1)
 common_nonsyn_variants_plot.set_xlabel('mtDNA region', fontsize=12, weight='bold', labelpad=18)
@@ -1375,6 +1373,7 @@ scored_common_nonsyn_variants = pd.concat([
     scored_common_nonsyn_CIV_var_cross_tab_graph, scored_common_nonsyn_CV_var_cross_tab_graph],
     ignore_index=True, sort=False)
 
+scored_common_nonsyn_variants = scored_common_nonsyn_variants.astype({"percentage": float})
 
 scored_common_nonsyn_variants_plot = sns.barplot(x='rare_var', y='percentage', hue='status',
                                           data=scored_common_nonsyn_variants,  edgecolor = "grey", linewidth = 1)
@@ -1403,6 +1402,8 @@ common_syn_variants = pd.concat([
     common_syn_CIV_var_cross_tab_graph, common_syn_CV_var_cross_tab_graph],
     ignore_index=True, sort=False)
 
+common_syn_variants = common_syn_variants.astype({"percentage": float})
+
 common_syn_variants_plot = sns.barplot(x='rare_var', y='percentage', hue='status',
                                           data=common_syn_variants,  edgecolor = "grey", linewidth = 1)
 common_syn_variants_plot.set_xlabel('mtDNA region', fontsize=12, weight='bold', labelpad=18)
@@ -1427,6 +1428,8 @@ all_coding_common_variants = pd.concat([common_coding_var_cross_tab_graph,
     common_syn_var_cross_tab_graph,
     common_nonsyn_var_cross_tab_graph, common_scored_var_cross_tab_graph],
     ignore_index=True, sort=False)
+
+all_coding_common_variants = all_coding_common_variants.astype({"percentage": float})
 
 all_coding_common_variants_plot = sns.barplot(x='rare_var', y='percentage', hue='status',
                                           data=all_coding_common_variants,  edgecolor = "grey", linewidth = 1)
@@ -1772,5 +1775,5 @@ common_mtDNA_var_fishers_tests.to_excel("Fishers_test_output.xlsx", index = Fals
 
 print('Analysis successfully completed!')
 
-msg =  "SUCCESS!!Your data has been analysed and your output files been saved!"
+msg =  "SUCCESS!! Your data has been analysed and your output files been saved!"
 sg.popup_ok(msg,title ='Files saved successfully')
