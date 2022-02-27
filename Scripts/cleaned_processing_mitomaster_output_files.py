@@ -1777,3 +1777,4 @@ print('Analysis successfully completed!')
 
 msg =  "SUCCESS!! Your data has been analysed and your output files been saved!"
 sg.popup_ok(msg,title ='Files saved successfully')
+
