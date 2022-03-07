@@ -1,5 +1,5 @@
 cycler==0.10.0
-dask==2.21.0
+dask==2.21.0 #dont need dask
 easygui==0.98.1
 et-xmlfile==1.0.1
 fsspec==0.7.4

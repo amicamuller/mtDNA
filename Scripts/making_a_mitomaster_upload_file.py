@@ -1,19 +1,20 @@
-import easygui, os, pandas as pd, numpy as np, glob
+import PySimpleGUI as sg, os, pandas as pd, numpy as np, glob, warnings
 print("Running 'making_a_mitomaster_upload_file' script...")
 
-# EASYGUI POP-UPS WITH REQUIREMENTS
+# SIMPLEPYGUI POP-UPS WITH REQUIREMENTS
 
 welcome_msg = ("Running this script will make a text file that can be uploaded to Mitomaster for further processing "
                "and the assignment of Genbank and Haplogroup frequencies of the individual variants.\n\n"
                )
 welcome_title = 'Welcome!\n\n'
 
-easygui.msgbox(welcome_msg, welcome_title)
+sg.popup_ok(welcome_msg, title= welcome_title)
+
+warnings.filterwarnings(action='ignore')
 
 
-
-# use easygui to allow user to select the folder where they have saved the data for this script
-source_dir_of_required_files = easygui.diropenbox(msg="Welcome! For this script to run, please select the "
+# use simplepygui to allow user to select the folder where they have saved the data for this script
+source_dir_of_required_files = sg.popup_get_folder(message="For this script to run, please select the "
                                                       "\"Required_files\" folder that was downloaded together with "
                                                       "this script", title="Select folder")
 
@@ -27,19 +28,19 @@ msg = ("Before proceeding, please ensure the following:\n\n"
        "a .txt (i.e. text) format)\n\n"
        "4. The names of your mtDNA-Server homoplasmy (i.e. variant) files contain the word \"variants\" and are in a "
        ".txt format\n\n "
-       "              Click \"Continue\" if you have ensured all of the above\n\n")
+       "Click \"OK\" if you have ensured all of the above\n\n")
 
 title = 'Please Confirm'
-if easygui.ccbox(msg, title):  # show a Continue/Cancel dialog
-    pass  # user chose Continue
-else:  # user chose Cancel
+if sg.popup_ok(msg, title=title):
+    pass
+else:
     exit()
 
 
 # Preparing mtDNA heteroplasmy files from mtDNA Server
 
-# use easygui to allow user to select the folder with their mtDNA server files
-source_dir = easygui.diropenbox(msg='Please select the folder in which you have saved all your mtDNA-Server'
+# use simplepygui to allow user to select the folder with their mtDNA server files
+source_dir = sg.popup_get_folder(message='Please select the folder in which you have saved all your mtDNA-Server'
                                     ' files.', title='Select a folder')
 
 os.chdir(source_dir)
@@ -49,7 +50,8 @@ os.chdir(source_dir)
 # if there are no heteroplasmy files print error message and move on
 if len(glob.glob('*heteroplasmies*.txt')) == 0:
     # bring up error message asking the user to double check whether they have heteroplasmy files for their samples.
-    if easygui.ccbox(msg="OOPS. Looks like there aren't any heteroplasmy files in your selected folder\n\n"
+
+    if sg.popup_ok("OOPS. Looks like there aren't any heteroplasmy files in your selected folder\n\n"
                    "Please check:\n\n"
                    "1. That your samples have heteroplasmy files\n\n"
                    "2. That you have selected the correct folder\n\n"
@@ -57,15 +59,15 @@ if len(glob.glob('*heteroplasmies*.txt')) == 0:
                          "'heteroplasmies'\n\n "
                    "If you are sure that your samples don't have heteroplasmy files, click 'Continue', otherwise "
                          "click 'Cancel' and ensure the above\n\n",
-                   title="ERROR: We couldn't find your files!", choices=["Continue", "Cancel"]):
+                   title="ERROR: We couldn't find your files!"):
         pass
     else:
         exit() # exit if the user has heteroplasmy files but didn't choose the right folder
 
 # else make one dataframe from individual heteroplasmies.txt files
 else:
-    # import all heteroplasmyy files and concatenate them to make one pandas dataframe
-    all_heteroplasmies_files = glob.glob(source_dir + '\*heteroplasmies*.txt')
+    # import all heteroplasmy files and concatenate them to make one pandas dataframe
+    all_heteroplasmies_files = glob.glob(os.path.join(source_dir, '*heteroplasmies*.txt'))
     heteroplasmies = pd.concat((pd.read_csv(f, sep='\t') for f in all_heteroplasmies_files), sort=False)
     print('Processing heteroplasmies...')
 
@@ -79,7 +81,7 @@ else:
     filtered_heteroplasmies = type1_heteroplasmies[wanted_heteroplasmy_columns]
     filtered_heteroplasmies = filtered_heteroplasmies.astype({'POS': str})
     # New Column (Minor is not Ref):	 =if(ref=minor fwd; '' ; minor fwd)
-    filtered_heteroplasmies.loc[:, 'minor_not_ref'] = pd.np.where \
+    filtered_heteroplasmies.loc[:, 'minor_not_ref'] = np.where \
         ((filtered_heteroplasmies.loc[:, 'rCRS'] == filtered_heteroplasmies.loc[:, 'MINOR-BASE-FWD']),
          '', filtered_heteroplasmies.loc[:, 'MINOR-BASE-FWD'])
 
@@ -132,10 +134,15 @@ else:
     # Step 4: Join the minor and top SNP data frames
 
     # ask the user which percentage of heteroplasmy  they want to include in their analysis
-    user_het_level = easygui.enterbox(
-        msg="Please enter the heteroplasmy level you'd like to include in your analysis (e.g. 50).\n\n"
-            "We recommend using a 50% heteroplasmy cut-off or higher", title='Percentage heteroplasmy cut-off', default='50',
-        strip=True)
+    layout = [[sg.Text("Please enter the heteroplasmy level you'd like to include in your analysis (e.g. 50).\n\n"
+            "We recommend using a 50% heteroplasmy cut-off or higher")],
+              [sg.InputText()],
+              [sg.Submit(), sg.Cancel()]]
+
+    het_window = sg.Window('Percentage heteroplasmy cut-off', layout)
+    event, values = het_window.read()
+    het_window.close()
+    user_het_level = values[0]
     user_het_level_int = int(user_het_level)
 
     processed_heteroplasmies = pd.concat([final_top_snps, final_minor_snps], ignore_index=True, sort=False)
@@ -171,18 +178,18 @@ else:
     heteroplasmic_merge = processed_heteroplasmies[['ID', 'SNP', 'HET-LEVEL']]
     # remove _rCRS from sample name if input files were fastq files
     heteroplasmic_merge.loc[:,'ID'] = heteroplasmic_merge.loc[:,'ID'].str.replace('_rCRS', '')
-    print(heteroplasmic_merge[['ID']])
+
     # add new column that can be used for merging dataframes later on
     heteroplasmic_merge.loc[:, 'haplo_merge_ref'] = heteroplasmic_merge.loc[:,"ID"] + '_' + heteroplasmic_merge.loc[:,"SNP"]
     # rename columns
     heteroplasmic_merge = heteroplasmic_merge.rename(columns = {'HET-LEVEL':'heteroplasmy_%'})
-    print(heteroplasmic_merge)
+
 
 # Step 5: Preparing mtDNA-Server variant files
 
 # check if there are homoplasmic (i.e. variant) txt files in the selected folder
 if len(glob.glob('*variants*.txt')) == 0:
-    easygui.msgbox("OOPS. Looks like there aren't any variant files in your selected folder\n\n"
+    sg.popup_quick_message("OOPS. Looks like there aren't any variant files in your selected folder\n\n"
                    "We can't create a Mitomaster upload file for you without your variant files...\n\n"
                    "So please check:\n\n"
                    "1. That you have selected the correct folder\n\n"
@@ -192,7 +199,7 @@ if len(glob.glob('*variants*.txt')) == 0:
 print('Processing homoplasmic variants...')
 
 # make one dataframe from individual variant.txt (i.e. homoplasmy) files
-all_variant_files = glob.glob(source_dir + '\*variants*.txt')
+all_variant_files = glob.glob(os.path.join(source_dir, '*variants*.txt'))
 variants = pd.concat((pd.read_csv(f, sep='\t') for f in all_variant_files), sort = False)
 # fill na values with 0
 variants = variants.fillna(0)
@@ -217,7 +224,6 @@ homoplasmic_merge.loc[:,'haplo_merge_ref'] = homoplasmic_merge.loc[:,"ID"] + '_'
 # add a heteroplasmy-level column where values = 100
 homoplasmic_merge.loc[:,'heteroplasmy_%'] = 100
 
-print(homoplasmic_merge[['heteroplasmy_%']])
 
 # Step 6: Make a Mitomaster upload file with identified variants
 
@@ -252,8 +258,8 @@ else:
     mitomaster_upload_file['ref'].mask(mitomaster_upload_file['ref'] == 'N', ':', inplace=True)
 
 
-destination_dir = easygui.diropenbox(
-    msg='Please select the folder in which you want to save your Mitomaster upload files')  # easygui is used to get a path
+destination_dir = sg.popup_get_folder(
+    message='Please select the folder in which you want to save your Mitomaster upload files')  #simplepygui is used to get a path
 
 # change directory to the directory chosen by the user
 os.chdir(destination_dir)
@@ -271,7 +277,7 @@ het_levels.to_csv(destination_dir + '\het_levels.csv', index=False)
 
 # make a file with all variant's heteroplasmy levels that flags previously confirmed pathogenic variants
 # use path chosen by user to the "Required_files" folder to open the file
-cnfrm_var_file_location = source_dir_of_required_files + "\mitomap_cnfrm_mutations.txt"
+cnfrm_var_file_location = os.path.join(source_dir_of_required_files, "mitomap_cnfrm_mutations.txt")
 # import mitomap_cnfrm_mutations.csv file
 cnfrm_var = pd.read_csv(cnfrm_var_file_location, sep='\t', engine='python')
 
@@ -283,11 +289,11 @@ het_levels_cnfrm.to_excel(destination_dir + '\het_levels_cnfrm.xlsx', index=Fals
 print('Mitomaster upload file/s saved successfully to '+ destination_dir)
 
 
-easygui.msgbox("SUCCESS!! \n\n"
+sg.popup_ok("SUCCESS!! \n\n"
                "Your files (homoplasmies_mitomaster_upload_file.txt, heteroplasmies_mitomaster_upload_file.txt, "
                "het_levels.csv and het_levels_cnfrm.xlsx) are complete and have been saved to the folder you have "
                "selected!\n\n"
-               "Please follow the 10 instructions below to upload your file to Mitomaster and to subsequently download "
+               "Please follow the 8 instructions below to upload your file to Mitomaster and to subsequently download "
                "the required output files:\n\n "
                "1. Go to the Mitomaster SNV query page at https://www.mitomap.org/mitomaster/index_snvs.cgi \n\n"
                "2. Under Step 1: Select 'Compute haplotype (only recommended if supply a full set of SNVs)' \n\n"
@@ -302,6 +308,6 @@ easygui.msgbox("SUCCESS!! \n\n"
                "  - Has NO SPACES between words (use an underscore instead of spaces e.g. mitomaster_output_2020)\n\n"
                "  - Includes the word \"mitomaster\" (all lower case letters) \n\n"
                "8. Run the script 'cleaned_processing_mitomaster_output_files'\n\n",
-               title='File saved successfully', ok_button='OK. Got it!')
+               title='File saved successfully')
 
 
