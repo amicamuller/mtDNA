@@ -26,7 +26,7 @@ The second script (```cleaned_processing_mitomaster_output_files.py```) tests th
 
 REQUIREMENTS
 ------------
-Before running the scripts in this repository, please ensure you have set up an environment with the requirements specified in the 'mtDNA_sequencing_Python_requirements.txt'.
+Before running the scripts in this repository, please ensure you have set up an environment with the requirements specified in the 'requirements.txt'.
 
 RUNNING THE ANALYSIS
 --------------------
