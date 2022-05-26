@@ -653,9 +653,9 @@ haplogroup_choices = ["African","European"]
 reply = easygui.buttonbox(haplo_choice_msg, choices=haplogroup_choices)
 
 # Define african and European lineages
-african_lineages = ['L0']
+african_lineages = ['L']
 euro_lineages = ['X','I', 'W','H', 'V', 'J', 'T', 'U', 'K']
-# ['X','X1', 'X2','I', 'W', 'R0', 'R0a', 'H', 'HV', 'V', 'JT', 'J', 'T', 'U', 'K', 'N1', 'N2']
+
 # use user choice to filter mitomster output and exclude unwanted samples
 haplo_choice = african_lineages if reply == 'African' else euro_lineages
 
